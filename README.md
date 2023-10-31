@@ -9,6 +9,7 @@ Necessary scripts for this part are try_out_chrom.sh and chr_EM10.sh as well as 
 cd; wget https://people.maths.bris.ac.uk/~madjl/finestructure/fs_4.1.1.zip
 unzip fs_4.1.1.zip; rm fs_4.1.1.zip
 mv fs_4.1.1 finestructure
+cd finestructure
 ./fs_install.sh
 ```
 
@@ -28,18 +29,17 @@ wget https://github.com/sahwa/ChromoPainterV2/blob/main/ChromoPainterv2
 wget https://github.com/sahwa/ChromoPainterV2/blob/main/ChromoPainterv2.c
 gcc -Wall -o ChromoPainterv2 ChromoPainterv2.c -lm -lz
 rm ChromoPainterv2.c
-mv ChromoPainterv2 finestructure/
 ```
 
 4. Download and unzip references files/genetic maps. 
 ```
-git clone https://github.com/adimitromanolakis/geneticMap-GRCh37
+cd; git clone https://github.com/adimitromanolakis/geneticMap-GRCh37
 gunzip ~/geneticMap-GRCh37/genetic_map_GRCh37_*
 ```
 
 5. Make test directory and enter directory. 
 ```
-mkdir chr1; cd ./chr1
+cd finestructure; mkdir chr1; cd ./chr1
 ```
 
 5. Copy BEAGLE phased files into this working directory
@@ -64,11 +64,11 @@ for chr in {1,5,8,15}; do
 done
 ```
 
-8. Run a test with chromopainterv2 for the selected chromosomes. This will be necessary for when we run 
+8. Run a test with chromopainterv2 for the selected chromosomes. This will be necessary for when we run chromopainter for all chromosomes. 
 ```
 for chr in {1,5,8,15}; do
 ~/finestructure/ChromoPainterv2 -g nonLD_phased${chr}.phase -r chr${chr}.recombfile -t nonLD_phased${chr}.ids -o chr${chr}_EM10 -a 0 0 -i 10 -in -iM
 done
 ```
 
-
+After this > chromocombine and finestructure can work.
