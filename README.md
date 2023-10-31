@@ -1,17 +1,17 @@
 ## IBD analyses
 Last updated: Tuesday 31 October 2023
-In this script, you will PLINK (1.9) data to phase with BEAGLe, and subsequently use for hap-ibd and IBDne analyses.
+In this script, you will PLINK (1.9) data to phase with BEAGLE, and subsequently use for hap-ibd and IBDne analyses.
 The script can be run in bash and plots can be recreated in R with the ggplot2 package. 
 
 ### Phasing with BEAGLE
 Script: beagle_raute_only.sh or beagle_data.sh. See also beagle_example.sh from developers.
 
-1. Convert files to VCF format
+1. Convert files to VCF format.
 ```
 plink --bfile ~/plink/our_samples/our_samples_maf --allow-no-sex --recode vcf-iid --alleleACGT --out ~/plink/phased_data/our_samples
 ```
 
-2. Compress the VCF files and index it
+2. Compress the VCF files and index it.
 ```
 bgzip ~/plink/phased_data/our_samples.vcf
 tabix -f -p vcf ~/plink/phased_data/our_samples.vcf.gz
@@ -25,7 +25,7 @@ wget https://faculty.washington.edu/browning/beagle/beagle.22Jul22.46e.jar
 mkdir raute_only
 ```
 
-4. Download GRCh37 maps in PLINK format from Browning lab, unzip, and rename X chromosome to 23
+4. Download GRCh37 maps in PLINK format from Browning lab, unzip, and rename X chromosome to 23.
 ```
 wget https://bochet.gcc.biostat.washington.edu/beagle/genetic_maps/plink.GRCh37.map.zip
 unzip plink.GRCh37.map.zip
@@ -42,14 +42,14 @@ for chr in `bcftools view -h ~/plink/phased_data/our_samples.vcf.gz | perl -ne '
 done
 ```
 
-6. Run BEAGLE for chromosomes separately
+6. Run BEAGLE for chromosomes separately.
 ```
 for chromosome in {1..22}; do
       java -jar beagle.22Jul22.46e.jar gt=./raute_only/our_samples${chromosome}.vcf.gz  map=plink.chr${chromosome}.GRCh37.map         window=20 out=./raute_only/our_samples_chr${chromosome} nthreads=12
 done
 ```
 
-7. Index each chromosome vcf for later analyses
+7. Index each chromosome vcf for later analyses.
 ```
 for chromosome in {1..22}; do
 	bgzip ./raute_only/our_samples_chr${chromosome}.vcf
@@ -57,30 +57,31 @@ for chromosome in {1..22}; do
 done
 ```
 
-8. Concatenate each chromosome-specific VCF, compress, and index (for downstream analyses)
+8. Concatenate the chromosome-specific VCF files, compress, and index (for downstream analyses).
 ```
 bcftools concat -o concat_raute.vcf our_samples_chr{1..22}.vcf
 bgzip concat_raute.vcf
 tabix -p vcf concat_raute.vcf.gz
 ```
 
-9. Lastly, also merge the genetic maps together (still in PLINK format) for downstream analyses
+9. Lastly, also merge the genetic maps together (still in PLINK format) for downstream analyses.
+```
 cat plink.chr{1..22}.GRCh37.map > GRCh37.map
-
+```
 
 ### Identifying IBD (identity-by-descent) segments using hap-IBD
-Script: in IBD_analyses directory, find script: hap_IBD.sh. See also run_hap_IBD_test.sh. 
+Script: in IBD_analyses directory, find script: hap_IBD.sh. See also run_hap_IBD_test.sh and test folder for examples. 
 
-1. Create directory for all IBD analyses and download hap-ibd program
+1. Create directory for all IBD analyses and download hap-ibd program.
 ```
 cd; mkdir IBD_analyses; cd ~/IBD_analyses
 wget https://faculty.washington.edu/browning/hap-ibd.jar
 ```
 
-2. Create directory for hap-ibd output
+2. Create directory for hap-ibd output.
 ```
 mkdir hap_ibd
-mkdir hap_ibd/single_run
+mkdir hap_ibd/single_run #as I previously ran BEAGLE multiple times
 ```
 
 3a. Run hap-ibd separated for each chromosome
@@ -97,23 +98,23 @@ java -jar ./hap-ibd.jar gt=~/beagle/raute_only/concat_raute.vcf.gz map=~/beagle/
 ```
 
 ### Estimate effective population sizes with IBDne.
-Script: in IBD_analyses directory, find scripts: extract_raute_IBD.sh and IBD_ne.sh
+Script: in IBD_analyses directory, find scripts: extract_raute_IBD.sh and IBD_ne.sh.
 
-1. Download IBDne program in the previously made directory
+1. Download IBDne program in the previously made directory.
 ```
 cd ~/IBD_analyses
 wget https://faculty.washington.edu/browning/ibdne/ibdne.23Apr20.ae9.jar
 ```
 
-2. Unzip the hap-ibd output 
+2. Unzip the hap-ibd output.
 ```
 gunzip ~/IBD_analyses/hap_ibd/single_run/*.ibd.gz 
 gunzip ~/IBD_analyses/hap_ibd/concat_raute.ibd.gz
 ```
 
-3. Since the hap-ibd software ran for all our samples, 1342 in total at this time (31 oct 2023), we need to extract only the Raute samples
+3. Since the hap-ibd software ran for all our samples, 1342 in total at this time (31 oct 2023), we need to extract only the Raute samples.
 
-3a. Select all individuals from the full census list (of our study population only) and select only the names of the individuals to be put in a new file (Raute_individuals.txt)
+3a. Select all individuals from the full census list (of our study population only) and select only the names of the individuals to be put in a new file (Raute_individuals.txt).
 ```
 grep "Raute" ~/plink/modified_samples/all_individuals.txt > 'IBD_Raute.txt'
 awk '{print $2}' IBD_Raute.txt > Raute_individuals.txt
@@ -128,7 +129,7 @@ for chr in {1..22}; do
 done
 ```
 
-3c. Do the same for the concatenated file
+3c. Do the same for the concatenated file.
 ```
 awk 'NR==FNR{a[$0];next}($1 in a)' Raute_individuals.txt ./hap_ibd/concat_raute.ibd > ./hap_ibd/concat_raute.ibd2
 awk 'NR==FNR{a[$0];next}($1 in a)' Raute_individuals.txt ./hap_ibd/concat_raute.ibd2 > ./hap_ibd/concat_raute_113.ibd
