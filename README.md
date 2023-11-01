@@ -1,12 +1,34 @@
-# Population Genetics project 2023
+# Genetic structure analyses with flashpca and ADMIXTURE
+Here, I show how to use the programs flashpca and ADMIXTURE to examine genetic structure in populations. 
 
-Repository for the different analyses used in the project of population genetics with the Raute. I've documented here all analyses that we plan on using, as well as some that we may not use in the end but for which I want to document how I created the pipelines. The repo includes the following
+### flashpca for pca
+Why flashpca? Allows you to look at a lot of different PCs, but also ease of use of program. See https://github.com/gabraham/flashpca for more information. 
 
-- Using PLINK (1.9 and 2.0) to filter, prune for LD, and wrangle data where necessary
-- Examine population genetic structure through allel-frequency-based methods such as PCA and ADMIXTURE
-- Compute F-statistics to examine patterns of gene flow and admixture (F3, F3 outgroup, and F4).
-- How to phase data with BEAGLE and how to use this data in IBD analyses (hap-IBD and IBDne)
-- How to use chromopainter, finestructure, and globetrotter as haplotype-based alternatives to the above-mentioned genetic structure analyses.
-- ...
-- ...
-- ...
+1. Install from source
+```
+git clone git://github.com/gabraham/flashpca
+
+#The Makefile contains three variables that need to be set according to where you have installed the Eigen headers and Boost headers and libraries on your system. The default values for these are:
+# EIGEN_INC=/usr/local/include/eigen
+# BOOST_INC=/usr/local/include/boost
+# BOOST_LIB=/usr/local/lib
+# SPECTRA_INC=spectra
+# If your system has these libraries and header files in those locations, you can simply run make:
+cd flashpca
+make all
+```
+
+
+
+2. Use pruned data to run flashpca
+```
+mkdir pca_output
+cd ~/plink/pca_output
+
+# Perform flashpca on each set of data you want to examine
+~/flashpca_x86-64 --bfile ~/plink/modified_samples/entire_network -d 20 -f _entirenet.txt
+~/flashpca_x86-64 --bfile ~/plink/modified_samples/reduced_network -d 20 -f _reducednet.txt
+~/flashpca_x86-64 --bfile ~/plink/modified_samples/raute_5 -d 20 -f _raute5.txt
+```
+
+
