@@ -178,6 +178,7 @@ awk '$1 == 9 {print $2}' frequency_snps.txt > overlapping_snps.txt # only extrac
 
 4. Now merge human origins data
 ```
+mkdir ~/plink/modified_samples
 cd ~/plink/data_others
 raute_unrl=~/plink/our_samples/unrelated_raute # take the unrelated individuals from our sample
 plink --bfile $raute_unrl --allow-no-sex \
@@ -192,6 +193,7 @@ If you use datasets that were genotyped on different arrays, there can be severa
 
 1. Extract SNP IDs from both .bim files and sort them numerically.
 ```
+mkdir ~/plink/merging_files; cd ~/plink/mergingfiles #make new directory
 BIM_all=~/plink/modified_samples/HO_samples.bim
 BIM_arc=~/plink/data_others/clean_Arciero_2018.bim
 awk '{print $2}' $BIM_all | sort > clean_samples_sorted.txt
@@ -239,6 +241,18 @@ plink --bfile ~/plink/modified_samples/HO_samples --allow-no-sex \
 	--make-bed \
 	--out ~/plink/modified_samples/all_pops
 ```
+
+7. Format the merged data the way you want. I wanted to make sure all samples have the same phenotype and to change the FID from plink to the population names.
+```
+plink --bfile ~/plink/modified_samples/all_pops --allow-no-sex \
+	--pheno ~/plink/subset_text_files/update_all_phenos.txt \
+	--update-ids ~/plink/subset_text_files/AllPops_updateFamilyIDs.txt \
+	--make-bed \
+	--out pheno_ready
+```
+
+3. First 
+
 
 
 
