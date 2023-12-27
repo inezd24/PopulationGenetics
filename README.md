@@ -74,10 +74,11 @@ plink2 --bfile ./our_samples/ibis/controls_samples --double-id --allow-no-sex --
         --update-ids $IDS \
 	--make-bed \
 	--out ./our_samples/ibis/controls_ibis
+```
 
 
 ### Using IBIS to extract kinship coefficient and determine unrelated individuals in R
-See https://github.com/williamslab/ibis/blob/master/README.md for more instructions on how to use IBIS as well as an overview of all the possible parameters. IBIS is aimed at unphased datasets. We use IBIS on the datafiles that are not yet filtered for MAF or pruned for LD. Use of script 'raute_IBIS.sh' from PLINK directory.
+See https://github.com/williamslab/ibis/blob/master/README.md for more instructions on how to use IBIS as well as an overview of all the possible parameters. IBIS is aimed at unphased datasets. We use IBIS on the datafiles that are not yet filtered for MAF or pruned for LD. 
 
 1. Compile IBIS
 ```
