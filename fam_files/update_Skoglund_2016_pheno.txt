@@ -1,0 +1,10 @@
+5 Burmese:Burm10 0
+6 Burmese:Burm12 0
+7 Burmese:Burm13 0
+8 Burmese:Burm14 0
+9 Burmese:Burm15 0
+10 Burmese:Burm16 0
+1 Burmese:Burm4 0
+2 Burmese:Burm7 0
+3 Burmese:Burm8 0
+4 Burmese:Burm9 0
