@@ -2,6 +2,8 @@
 
 Here, we continue with merging our data. We want to add the data from Arciero et al (2018) with our other data. However, this was genotyped on an Illumina array, hence merging will look slightly differently.
 
+### 1. First, we focus on only the populations from Arciero et al. (2018)
+
 1. Sort SNPs 
 ```
 echo "Start step 1"
@@ -158,7 +160,9 @@ plink --bfile Tingri --allow-no-sex \
 ```
 
 
-6. Find overlapping SNPs between HO data and Arciero data
+### 2. Merging data from different arrays
+
+1. Find overlapping SNPs between HO data and Arciero data
 ```
 cd ~/plink/merging_files
 
@@ -170,7 +174,7 @@ awk '$1 == 2 {print $2}' frequency_arc.txt > overlapping_snps_arc.txt
 ```
 
 
-7. Merge HO and Arciero data
+2. Merge HO and Arciero data
 ```
 # Go into the directory with all the files
 cd ~/plink/data_others/population_files_ARC/extracted_SNPs
@@ -204,6 +208,101 @@ plink --bfile ~/plink/modified_samples/HO_samples --allow-no-sex \
 	--make-bed \
 	--out ~/plink/modified_samples/all_pops
 ```
+
+
+### 3. Create different datasets from the merged data and filter that data
+
+1. Filter for MAF
+```
+plink --bfile ~/plink/modified_samples/all_pops --allow-no-sex \
+	--maf 0.05 \
+	--indep-pairwise 200 25 0.5 \
+	--make-bed \
+	--out ~/plink/modified_samples/all_pops_clean
+```
+
+
+2. Create a full network pruned for LD
+```
+plink --bfile ~/plink/modified_samples/all_pops_clean --allow-no-sex \
+	--extract ~/plink/modified_samples/all_pops_clean.prune.in \
+	--make-bed \
+	--out ~/plink/modified_samples/all_pops_LD
+```
+
+
+3. Create file of the Raute we want to keep for the subsetted datafile and make new dataset
+```
+# Create a file of of those Raute you want to remove > this is where the R script output previously made comes in!
+awk 'NR==FNR{subset[$1$2];next} !($1$2 in subset)' ~/plink/our_samples/ibis/Unrelated/Raute_subset_unrelatedness.txt ~/plink/our_samples/ibis/Unrelated/Raute_unrelatedness.txt > ~/plink/our_samples/ibis/Unrelated/Raute_to_remove
+
+# Turn into plink files
+plink --bfile ~/plink/modified_samples/all_pops_LD --allow-no-sex \
+	--remove ~/plink/our_samples/ibis/Unrelated/Raute_to_remove \
+        --make-bed \
+        --out raute_subset
+```
+
+
+4. Now make a dataset in which each population has a max of 10 individuals and the Raute from step 3 are reserved
+```
+# List all individuals in this network
+awk '{print $1, $2}' raute_subset.fam | sort | uniq > raute_subset.txt
+
+# A reduced network, in which every population has max 10 individuals
+awk -v max_lines_per_value=10 '{
+    if (++count[$1] <= max_lines_per_value) {
+        print > "reduced_network.txt"
+    }
+}' raute_subset.txt
+
+# Turn into plink reduced network files
+plink --bfile ~/plink/modified_samples/all_pops_LD --allow-no-sex \
+        --keep reduced_network.txt \
+        --make-bed \
+        --out reduced_network
+```
+
+5. OPTIONAL: create a regional network > need to update the samples_region.txt file
+```
+# Create a regional network as well
+plink --bfile ~/plink/modified_samples/pheno_ready --allow-no-sex \
+        --keep ~/plink/subset_text_files/samples_region.txt \
+        --extract ~/plink/modified_samples/all_pops.prune.in \
+        --maf 0.05 \
+        --make-bed \
+        --out ~/plink/modified_samples/regional_network
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
