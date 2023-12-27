@@ -18,74 +18,17 @@ cd flashpca
 make all
 ```
 
-2. Prepare data files for different pcas: first a dataset just with all samples, filtered for maf
+2. Use pruned data to run flashpca
 ```
-# For entire dataset (1342 samples)
-plink --bfile ~/plink/modified_samples/pheno_ready --allow-no-sex \
-	--extract ~/plink/modified_samples/all_pops.prune.in \
-	--maf 0.05 \
-	--make-bed \
-	--out entire_network
-```
-
-3. Create network with a smaller subset of Raute (only 5), but with all other samples (1313)
-```
-# First we make a list of the individuals who are in the populations
-sort -n -k 1 ~/plink/modified_samples/pheno_ready.fam > all_individuals.txt
-
-# Keep the five individuals of the Raute and all other individuals
-grep -v "Raute" all_individuals.txt > raute5_individuals.txt
-grep "8378.CEL" all_individuals.txt  >> raute5.txt
-grep "8301R.CEL" all_individuals.txt  >> raute5.txt
-grep "8234.CEL" all_individuals.txt  >> raute5.txt
-grep "8260R.CEL" all_individuals.txt  >> raute5.txt
-grep "8235.CEL" all_individuals.txt  >> raute5.txt
-cat raute5.txt >> raute5_individuals.txt
-rm raute5.txt
-
-# Turn into plink files
-plink --bfile ~/plink/modified_samples/pheno_ready --allow-no-sex \
-	--keep raute5_individuals.txt \
-        --extract ~/plink/modified_samples/all_pops.prune.in \
-        --maf 0.05 \
-        --make-bed \
-        --out raute_5
-```
-
-4. Create network with reduced number of individuals for each population included
-```
-# Select a maximum of 10 individuals per population
-awk -v max_lines_per_value=10 '{
-    if (++count[$1] <= max_lines_per_value) {
-        print > "reduced_network.txt"
-    }
-}' all_individuals.txt
-
-# But we want the Raute to be the same five individuals only, just in case
-grep -v "Raute" reduced_network.txt > reduced_network2.txt
-cat raute5.txt >> reduced_network2.txt
-rm reduced_network.txt
-mv reduced_network2.txt reduced_network.txt
-
-# Turn into plink files
-plink --bfile ~/plink/modified_samples/pheno_ready --allow-no-sex \
-        --keep reduced_network.txt \
-        --extract ~/plink/modified_samples/all_pops.prune.in \
-        --maf 0.05 \
-        --make-bed \
-        --out reduced_network
-```
-
-5. Use pruned data to run flashpca
-```
-# Make a directory with pca output
-mkdir pca_output
+# Working directory
+mkdir ~/plink/pca_output
 cd ~/plink/pca_output
 
-# Perform flashpca on each set of data you want to examine (with 20 pcs: -d 20)
-~/flashpca_x86-64 --bfile ~/plink/modified_samples/entire_network -d 20 -f _entirenet.txt
-~/flashpca_x86-64 --bfile ~/plink/modified_samples/reduced_network -d 20 -f _reducednet.txt
-~/flashpca_x86-64 --bfile ~/plink/modified_samples/raute_5 -d 20 -f _raute5.txt
+# Perform flashpca
+~/flashpca_x86-64 --bfile ~/plink/modified_samples/all_pops_LD -d 20 -f _allpopsLD.txt
+~/flashpca_x86-64 --bfile ~/plink/modified_samples/reduced_network -d 20 -f _reduced.txt
+~/flashpca_x86-64 --bfile ~/plink/modified_samples/raute_subset -d 20 -f _raute_subset.txt
+#~/flashpca_x86-64 --bfile ~/plink/modified_samples/regional_network -d 20 -f _regionalnet.txt
 ```
 
 ### Examine and visualise in R
@@ -114,12 +57,12 @@ library(colorblindr)
 library(plyr)
 
 # Import files
-pve_entirenet <- read_table("/Users/inezd/PHD/Genetic_Data/PCA_output/pve_entirenet.txt", col_names = F)
-pcs_entirenet <- read_table("/Users/inezd/PHD/Genetic_Data/PCA_output/pcs_entirenet.txt")
-pve_reducednet <- read_table("/Users/inezd/PHD/Genetic_Data/PCA_output/pve_reducednet.txt", col_names = F)
-pcs_reducednet <- read_table("/Users/inezd/PHD/Genetic_Data/PCA_output/pcs_reducednet.txt")
-pve_raute5 <- read_table("/Users/inezd/PHD/Genetic_Data/PCA_output/pve_raute5.txt", col_names = F)
-pcs_raute5 <- read_table("/Users/inezd/PHD/Genetic_Data/PCA_output/pcs_raute5.txt")
+pve_entirenet <- read_table("/Users/inezd/PHD/Genetic_Data/PCA_output/pve_allpopsLD.txt", col_names = F)
+pcs_entirenet <- read_table("/Users/inezd/PHD/Genetic_Data/PCA_output/pcs_allpopsLD.txt")
+pve_reducednet <- read_table("/Users/inezd/PHD/Genetic_Data/PCA_output/pve_reduced.txt", col_names = F)
+pcs_reducednet <- read_table("/Users/inezd/PHD/Genetic_Data/PCA_output/pcs_reduced.txt")
+pve_raute_subset <- read_table("/Users/inezd/PHD/Genetic_Data/PCA_output/pve_raute_subset.txt", col_names = F)
+pcs_raute_subset <- read_table("/Users/inezd/PHD/Genetic_Data/PCA_output/pcs_raute_subset.txt")
 population_data <- read_excel("/Users/inezd/PHD/Data/Population_data_information.xlsx") # This is a file with information about each population
 
 ######################################################################################################################
@@ -254,6 +197,9 @@ plot_PC34 <- function(split_df, color_list, shape_list, col_nr, size_points, PC_
     })
 }
 
+# I also have the same functions for checking other PC combinations, but you can easily adapt these by change the x and y in the ggplot mapping.
+
+
 ######################################################################################################################
                                                 Apply functions
 ######################################################################################################################
@@ -263,21 +209,21 @@ pcs_entirenet <- change_pcs(pcs_entirenet, populations_list)
 pcs_entirenet <- unique(pcs_entirenet)
 pcs_reducednet <- change_pcs(pcs_reducednet, populations_list)
 pcs_reducednet <- unique(pcs_reducednet)
-pcs_raute5 <- change_pcs(pcs_raute5, populations_list)
-pcs_raute5 <- unique(pcs_raute5)
+pcs_raute_subset <- change_pcs(pcs_raute_subset, populations_list)
+pcs_raute_subset <- unique(pcs_raute_subset)
 
 # Split
 pcs_entire_split <- split_pcs(pcs_entirenet)
 pcs_reduced_split <- split_pcs(pcs_reducednet)
-pcs_raute5_split <- split_pcs(pcs_raute5)
+pcs_raute_subset_split <- split_pcs(pcs_raute_subset)
 
 # Change eigenvalues
 pve_entirenet$X1 <- round(pve_entirenet$X1*100,2)
 names(pve_entirenet) <- 'Eigenvalue'
 pve_reducednet$X1 <- round(pve_reducednet$X1*100,2)
 names(pve_reducednet) <- 'Eigenvalue'
-pve_raute5$X1 <- round(pve_raute5$X1*100,2)
-names(pve_raute5) <- 'Eigenvalue'
+pve_raute_subset$X1 <- round(pve_raute_subset$X1*100,2)
+names(pve_raute_subset) <- 'Eigenvalue'
 
 ######################################################################################################################
                                                     Visualize
@@ -305,17 +251,190 @@ ggsave("/Users/inezd/PHD/Genetic_Data/PCA_output/pcs_reducednet_12.png",pcs_redu
 pcs_reducednet_34 <- plot_PC34(pcs_reduced_split, colors, shapes, 3, 3, 1, 2, 1.56, 0.96)
 ggsave("/Users/inezd/PHD/Genetic_Data/PCA_output/pcs_reducednet_34.png",pcs_reducednet_34, bg='transparent', height = 18, width = 25)
 
-# Entire network, but only 5 Raute
+# Entire network, but only few Raute
 colors <- setNames(c("#ee8866", "#77aadd", "#eedd88", "#ffaabb","#99ddff", "#838B83",  
                      "#836FFF", "#8B6914", "#ffae34", "#762A83", "#000000"), names(pcs_raute5_split))
-pcs_raute5_12 <- plot_PC12(pcs_raute5_split, colors, shapes, 3, 3, 1, 2, 4.30, 2.07)
-ggsave("/Users/inezd/PHD/Genetic_Data/PCA_output/pcs_reducednet_12.png",pcs_raute5_12, bg='transparent', height = 18, width = 25)
-pcs_raute5_34 <- plot_PC34(pcs_raute5_split, colors, shapes, 3, 3, 1, 2, 1.56, 0.96)
-ggsave("/Users/inezd/PHD/Genetic_Data/PCA_output/pcs_reducednet_34.png",pcs_raute5_34, bg='transparent', height = 18, width = 25)
+pcs_raute_subset_12 <- plot_PC12(pcs_raute_subset_split, colors, shapes, 3, 3, 1, 2, 4.30, 2.07)
+ggsave("/Users/inezd/PHD/Genetic_Data/PCA_output/pcs_raute_subset_12.png",pcs_raute_subset_12, bg='transparent', height = 18, width = 25)
+pcs_raute_subset_34 <- plot_PC34(pcs_raute_subset_split, colors, shapes, 3, 3, 1, 2, 1.56, 0.96)
+ggsave("/Users/inezd/PHD/Genetic_Data/PCA_output/pcs_raute_subset_34.png",pcs_raute_subset_34, bg='transparent', height = 18, width = 25)
 
 ################################################ end of script #######################################################
 ######################################################################################################################
 ```
+
+### Fst
+
+We can compute Fst with different programs: PLINK, EIGENSOFT, and also in R via Stamppp. This requires a rewritten raw file. Here we explore all options. 
+
+1. Make and move to working directory
+```
+mkdir ~/plink/Fst/
+cd ~/plink/Fst/
+```
+
+2. Compute with eigensoft
+```
+# Remake the .fam file where the population name is the phenotype (for the conversion to EIGENSTRAT
+awk '{print $1,$2,$3,$4,$5,1}' ~/plink/modified_samples/raute_subset.fam > raute_subset_altered.fam
+
+# Make a file that has all individuals in it
+awk '{print $2}' ~/plink/modified_samples/raute_subset.fam | sort | uniq > raute_subset_individuals.txt
+
+# Create first .par file
+rm par.file.eig
+echo genotypename: /home/ubuntu/plink/modified_samples/raute_subset.bed > par.file.eig
+echo snpname: /home/ubuntu/plink/modified_samples/raute_subset.bim >> par.file.eig
+echo indivname: raute_subset_altered.fam >> par.file.eig
+echo outputformat: EIGENSTRAT >> par.file.eig
+echo genotypeoutname: raute_subset_fst.geno >> par.file.eig
+echo snpoutname: raute_subset_fst.snp >> par.file.eig
+echo indivoutname: raute_subset_fst.ind >> par.file.eig
+echo poplistname: raute_subset_individuals.txt >> par.file.eig
+
+echo "File par.file.eig created"
+
+# Create second .par file
+rm par.file.fst
+echo genotypename: ./raute_subset_fst.geno > par.file.fst
+echo snpname: ./raute_subset_fst.snp >> par.file.fst
+echo indivname: ./raute_subset_fst.ind >> par.file.fst
+echo fstonly: YES >> par.file.fst
+echo inbreed: YES >> par.file.fst
+echo fstdetailsname: ./raute_subset_fst_info.out >> par.file.fst
+echo phylipoutname: ./raute_subset_phyl_fst >> par.file.fst
+echo evecoutname: ./raute_subset_fst.evec >> par.file.fst
+echo evaloutname: ./raute_subset_fst.eval >> par.file.fst
+
+echo "File par.file.fst created"
+
+# Convert data
+~/eigensoft/EIG-7.2.1/bin/convertf -p ./par.file.eig > ./out_convert.log
+echo "Data converted"
+
+# Calculate Fst
+~/eigensoft/EIG-7.2.1/bin/smartpca -p ./par.file.fst >./out_fst.log
+echo "Fst calculated"
+```
+
+
+3. Compute with PLINK
+```
+echo "Start with PLINK analysis"
+
+### For Raute only
+echo "First Raute only"
+
+# If for Raute only: Create file for raute
+grep "Raute" ~/plink/modified_samples/all_pops_LD.fam > raute_clusters.txt
+awk '{print $1, $2}' raute_clusters.txt > raute_fst.txt
+rm raute_clusters.txt
+awk '{$3 = $2} 1' raute_fst.txt > raute_clusters.txt
+rm raute_fst.txt
+
+# Compute Fst with pruned and filtered data
+plink2 --bfile ~/plink/modified_samples/all_pops_LD --allow-no-sex \
+        --within raute_clusters.txt \
+	--fst CATPHENO method=hudson blocksize=100 \
+        --out raute34_fst
+
+### For all samples
+echo "Now for all samples"
+
+awk '{print $1, $2}' ~/plink/modified_samples/raute_subset.fam > raute_subset_pops.txt
+awk '{$3 = $1} 1' raute_subset_pops.txt > raute_subset_popclusters.txt
+rm raute_subset_pops.txt
+
+# Perform PLINK Fst
+plink2 --bfile ~/plink/modified_samples/raute_subset --allow-no-sex \
+        --within raute_subset_popclusters.txt --fst CATPHENO method=wc \
+        --out raute_subset_fst
+```
+
+
+3. Lastly recode to raw files for STaMPP analysis in R
+```
+# First with all populations
+plink --bfile ~/plink/modified_samples/all_pops_LD --allow-no-sex \
+	--recode A \
+	--out Fst_stampp
+
+echo "Done for all populations"
+
+# Then only with Raute
+plink --bfile ~/plink/modified_samples/raute_subset --allow-no-sex \
+        --recode A \
+        --out Fst_stampp_subset
+
+echo "Done for only Raute"
+```
+
+4. Perform visualisation in R
+```
+### Visualise PLINK Fst
+
+fst_pops <- readr::read_table("/Users/inezd/PHD/Genetic_Data/F_statistics/Fst/raute_subset_fst.fst.summary", 
+                                col_names=c("pop1", "pop2", "fst"),
+                                col_types='ccc')
+fst_pops <- fst_pops[-1,]
+fst_pops$fst <- as.numeric(fst_pops$fst)
+hist(fst_pops$fst) # Differences are minuscule
+fst_all_plot <- ggplot(fst_pops,aes(x=pop1, y=pop2, fill=fst))+
+  geom_point(shape=21, size = 4)+
+  scale_fill_gradient( low="cyan3",high="darkorchid") +
+  theme(axis.line = element_line(size = 0.5, linetype = "solid", colour = "black"),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        text = element_text(size = 13),
+        panel.background = element_rect(fill='transparent'), 
+        plot.background = element_rect(fill='transparent', color=NA), 
+        legend.background = element_rect(fill='transparent'))
+fst_all_plot
+
+
+### Visualise sTaMPP Fst
+
+# Import files
+PopGentoLight=read.PLINK(file = "/Users/inezd/PHD/Genetic_Data/F_statistics/Fst_stampp.raw",
+                         parallel = F)
+
+# Convert to gen light object
+popgenlight=stamppConvert(PopGentoLight, "genlight")
+
+# Calculate pairwise Fst
+pair_fst=stamppFst(popgenlight, 100, 95, 4)
+melt_fst=melt(pair_fst)
+
+# Plot the phylogenies
+tree=nj(as.dist(pair_fst))
+
+plot(tree)
+plot.phylo(tree, "phylogram", edge.width=2, font=3, tip.color='black', cex=1.7)
+
+# Observe in a heatmap
+heatmap_fst <- ggplot(data = melt_fst, 
+                      aes(Var2, Var1, fill = value)) + 
+  geom_tile(color = "white")+ scale_fill_gradient(low = "white", high = "red", name="FST")  + 
+  ggtitle(expression(atop("Pairwise FST, WC (1984)", atop(italic("N = 143, L = 3,759"), ""))))+
+  labs( x = "Sampling Site", y = "Sampling Site") + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, size = 11, hjust = 1),axis.text.y = element_text(size = 12)) + 
+  coord_fixed()
+ggsave("./PCA_Plots/Redo/heatmap_fst.png",heatmap_fst, bg='transparent', height = 20, width = 20)
+
+
+### Fst calculation with eigensoft
+fst_eigensoft <- readr::read_table("/Users/inezd/Documents/PHD/Data/Oragene/Output/raute_subset_fst_info.out")
+names(fst_eigensoft)[1:6] <- c("pop1", "pop2","snpname", "N", "D", 'Ratio')
+fst_eigensoft <- fst_eigensoft[,1:6]
+fst_eigensoft$Ratio <- as.numeric(fst_eigensoft$Ratio)
+fst_eig_mean <- fst_eigensoft %>% 
+  group_by(pop1, pop2) %>%
+  summarise(N = mean(N), D = mean(D), Ratio = mean(Ratio, na.rm=T))
+fst_eig_mean$pop_pair <- paste(pmin(fst_eig_mean$pop1, fst_eig_mean$pop2), 
+                               pmax(fst_eig_mean$pop1, fst_eig_mean$pop2), sep = '-')
+
+
+```
+
 
 ### ADMIXTURE and PONG
 
@@ -328,17 +447,24 @@ tar xvzf admixture_linux-1.3.0.tar.gz
 2. Run ADMIXTURE (note: this still needs to be redone and is currently run on an old file). Currently, this lets ADMIXTURE run once for Ks 3 to 12. We need to do at least three different runs and give them different seeds. 
 ```
 #create necessary files
-BED_FILE=~/plink/redo/pcas/maf_05.bed #this file no longer should be used or exists in that location
+BED_FILE= ~/plink/modified_samples/all_pops_LD.bed # this file is filtered for MAF and pruned for LD
 OUTDIR=~/plink/clean_admixture
 mkdir -p $OUTDIR
 
 #loop through multiple k-values
-for K in {3..12}; do
-	CMD=cd $OUTDIR; admixture --cv $BED_FILE $K
-	echo $CMD
-	# sbatch -c 8 --mem 12000 --wrap="$CMD"
+for run in {1..3}; do
+	for K in {2..18}; do
+		seed=$RANDOM
+		CMD=cd $OUTDIR; admixture -s $seed --cv $BED_FILE $K  > raute_5.${run}.${K}.log
+		echo $CMD
+
+	# Change name
+	mv ~/plink/raute_5.${K}.Q ~/plink/raute_5.${K}.${run}.Q
+	mv ~/plink/raute_5.${K}.P ~/plink/raute_5.${K}.${run}.P
+done
 done
 ```
+
 
 3. Make the connection between the server and your laptop (you should open a new shell and run it from your laptop, not within the server).
 ```
