@@ -9,6 +9,7 @@ mkdir ~/plink/data_others
 # Go into directory and download all data that you want to add using for instance 'wget <link>' if public. If private, use way specified by authors/committee.
 ```
 
+
 2. Download EIGENSOFT to use function 'convertf'
 ```
 cd; wget https://github.com/DReichLab/EIG/archive/v7.2.1.tar.gz
@@ -18,6 +19,7 @@ cd eigensoft/src
 sudo make all
 sudo make install
 ```
+
 
 3. Create a par file for each dataset that needs to be converted in the following format:
 ```
@@ -29,103 +31,457 @@ outputformat:    ANCESTRYMAP,  EIGENSTRAT, PED, PACKEDPED or PACKEDANCESTRYMAP
 genotypeoutname: output genotype file
 snpoutname:      output snp file
 indivoutname:    output indiv file
+poplistname:	poplist file (which individuals you want to keep)
 ```
 
-4. Use convertf function to convert between data formats if necessary
+
+4. Use convertf function to convert between data formats (if necessary). With using convertif, we also update the population list. 
 ```
-~/eigensoft/EIG-7.2.1/bin/convertf -p par.file
+cd ~/plink/data_others/lazaridis_data
+
+~/eigensoft/EIG-7.2.1/bin/convertf -p par.lazaridis
+
+cd ~/plink/data_others/wang_data
+
+~/eigensoft/EIG-7.2.1/bin/convertf -p par.wang
+
+cd ~/plink/data_others/skoglund_data
+
+~/eigensoft/EIG-7.2.1/bin/convertf -p par.skoglund
+
+cd ~/plink/data_others/nakatsuka_data
+
+~/eigensoft/EIG-7.2.1/bin/convertf -p par.nakatsuka
+
+cd ~/plink/data_others/jeong_data
+
+~/eigensoft/EIG-7.2.1/bin/convertf -p par.jeong
+
+cd ~/plink/data_others/changmai_data
+
+~/eigensoft/EIG-7.2.1/bin/convertf -p par.changmai
 ```
 
-5. All datasets need to be filtered in the same way
+
+5. We move all newly generated PLINK format files into one directory
 ```
-# Refer to files
-WANG=~/plink/data_others/wang_data/Wang_2021
-LAZA=~/plink/data_others/lazaridis_data/Lazaridis_2014
-NAKA=~/plink/data_others/nakatsuka_data/Nakatsuka_2017
-SKOG=~/plink/data_others/skoglund_data/Skoglund_2016
-CHANG=~/plink/data_others/changmai_data/Changmai_2022
-JEONG=~/plink/data_others/jeong_data/Jeong_2019
-AGTA=~/plink/data_others/agta_data/Agta_2023
-ARCI=~/plink/data_others/Arciero_2018
-GNEC=~/plink/data_others/gnecchi_ruscone_data/Gnecchi_2017
+mkdir ~/plink/data_others/plink_files
 
-# New output directory
-new_out=~/plink/data_others
+# Move all files into this directory
+mv ~/plink/data_others/arciero_data/Arciero_2018* ~/plink/data_others/plink_files
+mv ~/plink/data_others/agta_data/AgtaHunterGatherer* ~/plink/data_others/plink_files
+mv ~/plink/data_others/lazaridis_data/Lazaridis_2014* ~/plink/data_others/plink_files
+mv ~/plink/data_others/wang_data/Wang_2021* ~/plink/data_others/plink_files
+mv ~/plink/data_others/nakatsuka_data/Nakatsuka_2017* ~/plink/data_others/plink_files
+mv ~/plink/data_others/skoglund_data/Skoglund_2016* ~/plink/data_others/plink_files
+mv ~/plink/data_others/changmai_data/Changmai_2022* ~/plink/data_others/plink_files
+mv ~/plink/data_others/jeong_data/Jeong_2019* ~/plink/data_others/plink_files
+```
 
-# For all other datasets, use a for loop to apply the same filters
-for f in $WANG $CHANG $SKOG $JEONG $NAKA $AGTA $GNEC $ARCI
-do
 
-	# Extract the filename without path
+6. Refer to new files and update IDs and phenotypes
+```
+# All population files:
+WANG=~/plink/data_others/plink_files/Wang_2021
+LAZA=~/plink/data_others/plink_files/Lazaridis_2014
+NAKA=~/plink/data_others/plink_files/Nakatsuka_2017
+SKOG=~/plink/data_others/plink_files/Skoglund_2016
+CHANG=~/plink/data_others/plink_files/Changmai_2022
+JEONG=~/plink/data_others/plink_files/Jeong_2019
+AGTA=~/plink/data_others/plink_files/AgtaHunterGatherer
+ARCI=~/plink/data_others/plink_files/Arciero_2018
+
+# Make new directory for files
+mkdir /home/ubuntu/plink/data_others/updated_plink_files
+
+# Go into directory we have with files
+cd /home/ubuntu/plink/data_others/plink_files
+
+# Path to the folder containing the update files (phenotype and IDs)
+update_folder="/home/ubuntu/plink/data_others/fam_files"
+plink_folder="."
+
+# Loop through all PLINK files in the specified folder
+for f in $WANG $CHANG $SKOG $JEONG $NAKA $AGTA $ARCI; do
+	# Extract the filename without path and extension
 	filename=$(basename "$f")
 
-	# Append "_clean" to the filename
-	new_filename="clean_${filename##*.}"
+	# Construct the paths for phenotype and ID update files
+	pheno_file="${update_folder}/update_${filename}_pheno.txt"
+	id_file="${update_folder}/update_${filename}_IDS.txt"
 
-	# Construct the new output path
-	output_path="${new_out}/${new_filename}"
+	# Replace with your desired output folder
+	new_out="/home/ubuntu/plink/data_others/updated_plink_files"
 
-	# Perform plink
-	plink2 --bfile $f --allow-extra-chr --chr {1..22} --set-all-var-ids @_# \
-        --geno 0.05 \
-        --mind 0.1 \
-        --hwe 0.000001 \
+        # Construct the new output path
+        output_path="${new_out}/${filename}"
+
+	# Perform PLINK operations with phenotype and ID updates
+        plink --bfile "${plink_folder}/${filename}" --allow-extra-chr --allow-no-sex \
+	--pheno "${pheno_file}" \
+	--update-ids "${id_file}" \
+	--make-bed \
+	--out "$output_path"
+done
+
+
+## FOR LAZARIDIS DATASET: this one has a weird chromosome (hence we do the --chr-set 90), so we filter it separately. 
+filename=$(basename $LAZA)
+pheno_file="${update_folder}/update_${filename}_pheno.txt"
+id_file="${update_folder}/update_${filename}_IDS.txt"
+new_out="/home/ubuntu/plink/data_others/updated_plink_files"
+output_path="${new_out}/${filename}"
+plink --bfile "${plink_folder}/${filename}" --chr-set 90 --allow-extra-chr --allow-no-sex \
+        --pheno "${pheno_file}" \
+        --update-ids "${id_file}" \
         --make-bed \
         --out "$output_path"
-done # we only filter for MAF later when merging datasets
+```
 
-# One file has weird chromosome names, hence we filter separately.
-plink2 --bfile $LAZA --chr-set 90 --allow-extra-chr --chr {1..22} --set-all-var-ids @_# \
-        --geno 0.05 \
-        --mind 0.1 \
-        --hwe 0.000001 \
+
+7. Filter each individual population from the different datasets
+```
+# Enter new directory with all the plink files in it
+mkdir ~/plink/data_others/population_files_HO
+cd ~/plink/data_others/population_files_HO
+
+# Now, we want to filter them per population:
+WANG=~/plink/data_others/updated_plink_files/Wang_2021
+LAZA=~/plink/data_others/updated_plink_files/Lazaridis_2014
+NAKA=~/plink/data_others/updated_plink_files/Nakatsuka_2017
+SKOG=~/plink/data_others/updated_plink_files/Skoglund_2016
+CHANG=~/plink/data_others/updated_plink_files/Changmai_2022
+JEONG=~/plink/data_others/updated_plink_files/Jeong_2019
+AGTA=~/plink/data_others/updated_plink_files/AgtaHunterGatherer
+ARCI=~/plink/data_others/updated_plink_files/Arciero_2018
+
+# Filter through each datafile
+for f in $WANG $CHANG $SKOG $JEONG $NAKA $AGTA; do
+
+	# Select only per family (population)
+	for fam in $(awk '{print $1}' ${f}.fam | sort | uniq); do
+
+		# First print the population
+		echo $fam | plink2 --bfile $f --allow-extra-chr --chr {1..22} --set-all-var-ids @_# \
+		--keep-fam /dev/stdin \
+		--geno 0.1 \
+		--mind 0.1 \
+		--hwe 0.000001 midp \
+		--make-bed \
+		--out $fam
+
+		# Print the first and last lines of the files
+		cat $fam.bim | head -10
+		cat $fam.bim | tail -10
+	done
+done
+
+
+
+# Then for Lazaridis only
+for fam in $(awk '{print $1}' ${LAZA}.fam | sort | uniq); do
+
+                # First print the population
+                echo $fam | plink2 --bfile $LAZA --chr-set 90 --allow-extra-chr --chr {1..22} --set-all-var-ids @_# \
+                --keep-fam /dev/stdin \
+                --geno 0.1 \
+                --mind 0.1 \
+                --hwe 0.000001 midp \
+                --make-bed \
+                --out $fam
+done
+
+# Now for Arciero, since this data is from a different array, we put it in a different folder so we can merge it separately later. 
+mkdir ~/plink/data_others/population_files_ARC
+cd ~/plink/data_others/population_files_ARC
+
+for fam in $(awk '{print $1}' ${ARCI}.fam | sort | uniq); do
+
+                # First print the population
+                echo $fam | plink2 --bfile $ARCI --allow-extra-chr --chr {1..22} --set-all-var-ids @_# \
+                --keep-fam /dev/stdin \
+                --geno 0.1 \
+                --mind 0.1 \
+                --hwe 0.000001 midp \
+                --make-bed \
+                --out $fam
+done
+```
+
+
+8. Peform a relatedness check with IBIS for each population.
+```
+# New directory
+mkdir ~/plink/data_others/ibis_populations
+
+# Go into directory with files
+cd ~/plink/data_others/population_files_HO
+
+# Save all filenames
+find ~/plink/data_others/population_files_HO/ -type f -name '*.bed' | awk -F/ '{print $NF}' | cut -d. -f1 | sort -u > populations
+
+# Perform IBIS for each population
+while IFS= read -r file; do
+	~/ibis/add-map-plink.pl ${file}.bim ~/ibis/genetic_map_GRCh37_chr{1..22}.txt > ~/plink/data_others/population_files_HO/${file}_map.bim
+	~/ibis/ibis ${file}.bed ${file}_map.bim ${file}.fam -min_l 7 -mt 500 -2 -mt2 500 -er .004 -printCoef -f ~/plink/data_others/ibis_populations/${file}
+done < populations
+
+# Now remove _map.bim files
+rm ~/plink/data_others/population_files_HO/*_map.bim
+
+### Now do the same for the populations from Arciero (2018)
+
+cd ~/plink/data_others/population_files_ARC
+
+# Save all filenames
+find ~/plink/data_others/population_files_ARC/ -type f -name '*.bed' | awk -F/ '{print $NF}' | cut -d. -f1 | sort -u > populations
+
+# Perform IBIS for each population
+while IFS= read -r file; do
+	~/ibis/add-map-plink.pl ${file}.bim ~/ibis/genetic_map_GRCh37_chr{1..22}.txt > ~/plink/data_others/population_files_ARC/${file}_map.bim
+	~/ibis/ibis ${file}.bed ${file}_map.bim ${file}.fam -min_l 7 -mt 500 -2 -mt2 500 -er .004 -printCoef -f ~/plink/data_others/ibis_populations/${file}
+done < populations
+
+rm ~/plink/data_others/population_files_ARC/*_map.bim
+```
+
+9. Check which populations have related individuals based on IBIS results
+```
+# Check you're into the right folder
+cd ~/plink/data_others/ibis_populations
+
+# Find all unique populations in the folder
+find ~/plink/data_others/ibis_populations/ -type f -name '*.coef'  | awk -F/ '{print $NF}' | cut -d. -f1 | sort -u > populations
+
+# Check which populations have individuals with higher relatedness
+while IFS= read -r file; do
+	awk -F'\t' 'NR > 1 && $3 > 0.25 { print FILENAME; exit }' ${file}.coef
+done < populations
+```
+
+
+10. Three populations are listed as having related individuals: Kusunda, Agta, and BaYaka. We remove these with R
+```
+### THIS SCRIPT IS EXECUTABLE IN R TO REMOVE RELATED INDIVIDUALS.
+### You need the R script from the previous github branch (filter individuals with PLINK)
+
+# From IBIS analyses, three populations had kin_coef values higher than 0.25: the Agta, BaYaka, and Karitiana
+
+# Import these datafiles:
+Agta_coef <- as.data.frame(read_table("/Users/inezd/PHD/Genetic_Data/IBIS/Agta.coef", col_names = T))
+BaYaka_coef <- as.data.frame(read_table("/Users/inezd/PHD/Genetic_Data/IBIS/BaYaka.coef", col_names = T))
+Kusunda_coef <- as.data.frame(read_table("/Users/inezd/PHD/Genetic_Data/IBIS/Kusunda.coef", col_names = T))
+
+# Search for unrelated individuals
+Agta_subset <- determine_relatedness(Agta_coef, "Agta") # 65 individuals
+BaYaka_subset <- determine_relatedness(BaYaka_coef, "BaYaka") # 12 individuals
+Kusunda_subset <- determine_relatedness(Kusunda_coef, "Kusunda") # 8 individuals
+
+# Save as files
+write.table(Agta_subset,'/Users/inezd/PHD/Genetic_Data/IBIS/Unrelated/Agta_unrelatedness.txt', sep=" ",col.names = F, row.names = F, quote=F)
+write.table(BaYaka_subset,'/Users/inezd/PHD/Genetic_Data/IBIS/Unrelated/BaYaka_unrelatedness.txt', sep=" ",col.names = F, row.names = F, quote=F)
+write.table(Kusunda_subset,'/Users/inezd/PHD/Genetic_Data/IBIS/Unrelated/Kusunda_unrelatedness.txt', sep=" ",col.names = F, row.names = F, quote=F)
+```
+
+
+11. Remove the related individuals from the datasets for the Kusunda, Agta and BaYaka
+```
+cd ~/plink/data_others/population_files_HO
+
+# Subset Kusunda
+plink --bfile Kusunda --allow-no-sex \
+        --keep ~/plink/data_others/ibis_populations/Unrelated/Kusunda_unrelatedness.txt \
         --make-bed \
-        --out ~/plink/data_others/clean_Lazaridis_2014
+        --out ~/plink/data_others/population_files_HO/Kusunda_unrl
 
+# Subset BaYaka
+plink --bfile BaYaka --allow-no-sex \
+        --keep ~/plink/data_others/ibis_populations/Unrelated/BaYaka_unrelatedness.txt \
+        --make-bed \
+        --out ~/plink/data_others/population_files_HO/BaYaka_unrl
+
+# Subset Agta
+plink --bfile Agta --allow-no-sex \
+        --keep ~/plink/data_others/ibis_populations/Unrelated/Agta_unrelatedness.txt \
+        --make-bed \
+        --out ~/plink/data_others/population_files_HO/Agta_unrl
+
+# Remove the files with the related individuals
+rm ~/plink/data_others/population_files_HO/Agta.*
+rm ~/plink/data_others/population_files_HO/BaYaka.*
+rm ~/plink/data_others/population_files_HO/Kusunda.*
 ```
 
-6. We have to check if any of these samples still contain any related individuals according to the threshold we set. Add map to all the bim files in the directory so that we can run IBIS.
+
+12. Create sorted SNP lists for each population (including the unrelated Raute and our Dailekh control samples)
 ```
-directory_path=~/plink/data_others
-EXT=.bim
-for f in "$directory_path"/*"$EXT"
-do
-	filename=$(basename "$f")
-	extension="${filename##*.}"
-	filename_no_extension="${filename%.*}"
-	new_filename="${filename_no_extension}_map.${extension}"
-	dir_path=$(dirname "$f")
-	output_path="${dir_path}/${new_filename}"
-	~/ibis/add-map-plink.pl $f ~/ibis/genetic_map_GRCh37_chr{1..22}.txt > "$output_path"
+# Working directory
+cd ~/plink/data_others/population_files_HO/
+
+# Create new directory for SNPS
+mkdir ~/plink/data_others/sorted_SNPs
+
+# Copy Raute and controls to population_files_HO
+cp ~/plink/our_samples/unrelated_samples/unrelated_raute* ./
+cp ~/plink/our_samples/unrelated_samples/unrelated_controls* ./
+
+# Define files
+find ~/plink/data_others/population_files_HO/ -type f -name '*.bim' | awk -F/ '{print $NF}' | sort -u > files
+
+# Loop through files
+while IFS= read -r file; do
+
+# Check which file we are on
+echo $file
+
+# Create a prefix for each file that is to be saved based on name of input file
+file_prefix=$(basename "$file" | cut -d. -f1)
+echo $file_prefix
+
+# Create output file based on prefix
+output_file="${file_prefix}_sorted_SNPs.txt"
+echo $output_file
+
+# Create new file with all sorted SNPs
+awk '{print $2}' $file | sort > "$output_file"
+
+echo "Values from column $file have been extracted to $output_file"
+
+# Print number of SNPs
+wc -l $output_file
+
+done < files
+
+# Move all files into new directory
+mv ./*_sorted_SNPs.txt ~/plink/data_others/sorted_SNPs
+
+# Lastly, we want to remove the Raute and control files from the working directory again.
+rm ./unrelated_raute*
+rm ./unrelated_controls*
+```
+
+13. Now we want to find the overlapping SNPs between all of these populations
+```
+# Working directory
+cd ~/plink/data_others/sorted_SNPs
+
+# Combine all files into one file
+cat ./*_sorted_SNPs.txt > combined_snps.txt
+
+# Sort this file
+sort combined_snps.txt -o combined_snps.txt
+
+# Find all unique files and sort them by frequency
+uniq -c combined_snps.txt > frequency_snps.txt
+
+# Find the number of populations so that we can select only the SNPs which occur in all pops
+awk '{if ($1 > max) max = $1} END {print max}' frequency_snps.txt
+
+# This should be 72 (as of Tue 19 December 2023). If the number of populations changes, then this number should be different too in the next cmd. 
+
+# Select only the SNPs which occur in all pops
+awk '$1 == 72 {print $2}' frequency_snps.txt > overlapping_snps.txt
+
+# This gives: 158011 (Tue 19 Dec 2023) SNPs which they occur in EACH single population!
+wc -l ~/plink/data_others/sorted_SNPs/overlapping_snps.txt
+```
+
+
+14. For each population, select only these 158011 SNPs. This is faster and easier than extracting the SNPs during the merge (I did this previously, and some of the SNPs that will NOT be extracted are duplicates and that causes issues during the merge)
+```
+# Working directory
+cd ~/plink/data_others/population_files_HO/
+
+# Do for all files
+find ~/plink/data_others/population_files_HO/ -type f -name '*.bed' | awk -F/ '{print $NF}' | cut -d. -f1 | sort -u > datasets
+
+# Make new directory
+mkdir ~/plink/data_others/extracted_SNPs
+
+# Perform IBIS for each population
+while IFS= read -r file; do
+
+plink2 --bfile ./$file \
+		--extract ~/plink/data_others/sorted_SNPs/overlapping_snps.txt \
+		--make-bed \
+		--out ~/plink/data_others/extracted_SNPs/$file
+done < datasets
+
+# Remove files in the ~/plink/data_others/population_files_HO folder
+```
+
+
+15. Create a merging file that is necessary to merge all populations together
+```
+# Check if file already exists. If it does, delete it (otherwise we append it too much)
+file_to_delete=~/plink/merging_files/populations_file_list.txt
+if [ -f "$file_to_delete" ]; then
+    rm "$file_to_delete"
+    echo "File $file_to_delete deleted."
+else
+    echo "File $file_to_delete does not exist."
+fi
+
+# Set the directory path
+directory_path="/home/ubuntu/plink/data_others/extracted_SNPs"
+
+# Create an array to store population file lists
+declare -a populations
+
+# Iterate through the files in the directory
+for file in "$directory_path"/*.bed; do
+    if [ -f "$file" ]; then
+        # Extract population name from the filename
+        population=$(basename "$file" .bed)
+
+        # Append the file names to the array in the desired order
+        populations+=("$population.bed $population.bim $population.fam")
+    fi
 done
+
+# Print the population file lists, each on a new line
+printf '%s\n' "${populations[@]}" > ~/plink/merging_files/populations_file_list.txt
+
+# We add the controls as well!
+echo /home/ubuntu/plink/our_samples/extracted_SNPs/unrelated_controls.bed /home/ubuntu/plink/our_samples/extracted_SNPs/unrelated_controls.bim /home/ubuntu/plink/our_samples/extracted_SNPs/unrelated_controls.fam >> ~/plink/merging_files/populations_file_list.txt
+
+# With this file, we can actually merge all of the Human Origins data
 ```
 
-7. Run IBIS on each of these datasets.
+
+16. Merge Human Origins files
 ```
-# List of file names (without extensions)
-files=("clean_Wang_2021" "clean_Lazaridis_2014" "clean_Jeong_2019" "clean_Skoglund_2016" "clean_Changmai_2022" "clean_Nakatsuka_2017" "clean_Agta_2023" "clean_Arciero_2018")
+# Go into the directory with all the files
+cd ~/plink/data_others/extracted_SNPs
 
-# Loop through the file names
-for file in "${files[@]}"; do
-    # Define the input file names
-    bed_file="${file}.bed"
-    bim_file="${file}_map.bim"
-    fam_file="${file}.fam"
-
-    # Run the IBIS program with the specified parameters
-    ~/ibis/ibis "$bed_file" "$bim_file" "$fam_file" -min_l 7 -mt 500 -2 -mt2 500 -er .004 -printCoef -f ~/out
-
-    # Optionally, you can add more commands or processing here for each file
-done
+# Perform the merge
+plink --bfile ~/plink/our_samples/extracted_SNPs/unrelated_raute --allow-no-sex \
+        --merge-list ~/plink/merging_files/populations_file_list.txt \
+        --make-bed \
+        --out ~/plink/modified_samples/HO_samples
 ```
 
-8. Perform the same action as I did after selecting only unrelated individuals with own samples if necessary for any datasets. For instance:
-```
-plink2 --bfile ~/plink/data_others/clean_Agta_2023 \
-	--keep ~/plink/roh/agtaHG_unrelatedness.txt \ # this is a list of unrelated individuals in the dataset according to chosen PI_HAT value
-	--make-bed \
-	--out clean_AgtaHunterGatherer_unrl
-```
+# See next script to add the non-HO data from Arciero et al. (2018)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ### Merging files from the same array (Human Origins)
