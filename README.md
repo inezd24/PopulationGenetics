@@ -74,7 +74,8 @@ plink2 --bfile ./our_samples/ibis/controls_samples --double-id --allow-no-sex --
         --update-ids $IDS \
 	--make-bed \
 	--out ./our_samples/ibis/controls_ibis
-~/plink/our_samples/ibis/controls_samples.*
+
+rm ~/plink/our_samples/ibis/controls_samples.*
 ```
 
 
